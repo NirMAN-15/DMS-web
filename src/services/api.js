@@ -1,12 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
 });
 
-// Request interceptor to attach JWT token to headers if it exists
+// Request interceptor — attach JWT token to every request
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -16,6 +16,22 @@ api.interceptors.request.use(
         return config;
     },
     (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Response interceptor — auto-logout on 401/403 (expired token)
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            // Redirect to login if not already there
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
+        }
         return Promise.reject(error);
     }
 );
